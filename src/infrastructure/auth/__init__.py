@@ -3,4 +3,10 @@ Authentication Infrastructure
 Implementación de autenticación JWT
 """
 
-__all__ = []
+from .jwt_service import JWTService
+from .password_hasher import PasswordHasher
+
+__all__ = [
+    "JWTService",
+    "PasswordHasher",
+]
