@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker
 )
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import NullPool, AsyncAdaptedQueuePool
 
 from ..config.settings import get_settings
 from .models import Base
@@ -31,19 +31,21 @@ def get_engine() -> AsyncEngine:
     global engine
     
     if engine is None:
-        # Configuración de pooling
-        pool_config = {
-            "pool_size": settings.DB_POOL_SIZE,
-            "max_overflow": settings.DB_MAX_OVERFLOW,
-            "pool_timeout": settings.DB_POOL_TIMEOUT,
-            "pool_recycle": settings.DB_POOL_RECYCLE,
-        }
+        # Configuración de pooling para async
+        pool_config = {}
         
         # En testing, usar NullPool para evitar problemas
         if settings.ENVIRONMENT == "testing":
-            pool_config = {"poolclass": NullPool}
+            pool_config["poolclass"] = NullPool
         else:
-            pool_config["poolclass"] = QueuePool
+            # Para async engines, usar configuración específica
+            pool_config = {
+                "pool_size": settings.DB_POOL_SIZE,
+                "max_overflow": settings.DB_MAX_OVERFLOW,
+                "pool_timeout": settings.DB_POOL_TIMEOUT,
+                "pool_recycle": settings.DB_POOL_RECYCLE,
+                "pool_pre_ping": True,  # Verificar conexión antes de usar
+            }
         
         engine = create_async_engine(
             settings.DATABASE_URL,
