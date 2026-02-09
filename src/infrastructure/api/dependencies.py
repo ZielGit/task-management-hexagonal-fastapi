@@ -11,8 +11,13 @@ from ...application.use_cases.update_task import UpdateTaskUseCase
 from ...application.use_cases.delete_task import DeleteTaskUseCase
 from ...application.use_cases.list_tasks import ListTasksUseCase
 from ...application.use_cases.assign_task import AssignTaskUseCase
+from ...application.use_cases.register_user import RegisterUserUseCase
+from ...application.use_cases.login_user import LoginUserUseCase
+from ...application.use_cases.get_current_user import GetCurrentUserUseCase
+from ...infrastructure.auth.auth_service_impl import AuthServiceImpl
 from ..database.connection import get_db_session
 from ..database.sqlalchemy_task_repository import SQLAlchemyTaskRepository
+from ..database.sqlalchemy_user_repository import SQLAlchemyUserRepository
 from ..auth.jwt_service import JWTService
 
 
@@ -81,23 +86,70 @@ async def get_assign_task_use_case(
     return AssignTaskUseCase(repository)
 
 
-# ============= AUTHENTICATION DEPENDENCIES =============
+# ============= USER REPOSITORY DEPENDENCY =============
 
-async def get_jwt_service() -> JWTService:
-    """Provee el servicio JWT"""
-    return JWTService()
+async def get_user_repository(
+    session: AsyncSession = Depends(get_db_session)
+) -> 'SQLAlchemyUserRepository':
+    """
+    Provee una instancia del repositorio de usuarios.
+    
+    Args:
+        session: Sesión de base de datos
+        
+    Returns:
+        Repositorio de usuarios
+    """
+    from ..database.sqlalchemy_user_repository import SQLAlchemyUserRepository
+    return SQLAlchemyUserRepository(session)
+
+
+# ============= AUTH SERVICE DEPENDENCY =============
+
+async def get_auth_service() -> 'AuthServiceImpl':
+    """Provee el servicio de autenticación"""
+    from ..auth.auth_service_impl import AuthServiceImpl
+    return AuthServiceImpl()
+
+
+# ============= USER USE CASE DEPENDENCIES =============
+
+async def get_register_user_use_case(
+    user_repository = Depends(get_user_repository),
+    auth_service = Depends(get_auth_service)
+) -> 'RegisterUserUseCase':
+    """Provee el caso de uso RegisterUser"""
+    from ...application.use_cases.register_user import RegisterUserUseCase
+    return RegisterUserUseCase(user_repository, auth_service)
+
+
+async def get_login_user_use_case(
+    user_repository = Depends(get_user_repository),
+    auth_service = Depends(get_auth_service)
+) -> 'LoginUserUseCase':
+    """Provee el caso de uso LoginUser"""
+    from ...application.use_cases.login_user import LoginUserUseCase
+    return LoginUserUseCase(user_repository, auth_service)
+
+
+async def get_current_user_use_case(
+    user_repository = Depends(get_user_repository)
+) -> 'GetCurrentUserUseCase':
+    """Provee el caso de uso GetCurrentUser"""
+    from ...application.use_cases.get_current_user import GetCurrentUserUseCase
+    return GetCurrentUserUseCase(user_repository)
 
 
 async def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    jwt_service: JWTService = Depends(get_jwt_service)
+    auth_service = Depends(get_auth_service)
 ) -> UUID:
     """
     Extrae y valida el usuario actual del token JWT.
     
     Args:
         credentials: Credenciales HTTP Bearer
-        jwt_service: Servicio de JWT
+        auth_service: Servicio de autenticación
         
     Returns:
         UUID del usuario autenticado
@@ -108,7 +160,7 @@ async def get_current_user_id(
     token = credentials.credentials
     
     try:
-        payload = jwt_service.decode_token(token)
+        payload = auth_service.decode_token(token)
         user_id = payload.get("sub")
         
         if user_id is None:
