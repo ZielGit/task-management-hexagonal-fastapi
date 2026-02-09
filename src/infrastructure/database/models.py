@@ -81,7 +81,7 @@ class TaskModel(Base):
 class UserModel(Base):
     """
     Modelo de base de datos para User.
-    Simplificado para el ejemplo.
+    Representa la estructura de la tabla en PostgreSQL.
     """
     __tablename__ = "users"
     
@@ -115,11 +115,28 @@ class UserModel(Base):
         nullable=False
     )
     
+    is_verified: Mapped[bool] = mapped_column(
+        default=False,
+        nullable=False
+    )
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         default=datetime.utcnow
     )
     
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+    
+    last_login: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+    
     def __repr__(self) -> str:
-        return f"<UserModel(id={self.id}, username='{self.username}')>"
+        return f"<UserModel(id={self.id}, username='{self.username}', email='{self.email}')>"
