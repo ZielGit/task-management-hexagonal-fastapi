@@ -89,12 +89,14 @@ async def create_task(
     summary="Get task by ID",
     responses={
         200: {"description": "Task found"},
+        401: {"description": "Not authenticated"},
         404: {"description": "Task not found"}
     }
 )
 async def get_task(
     task_id: UUID,
-    use_case: GetTaskUseCase = Depends(get_get_task_use_case)
+    use_case: GetTaskUseCase = Depends(get_get_task_use_case),
+    current_user_id: UUID = Depends(get_current_user_id)
 ) -> TaskResponseDTO:
     """
     Obtiene una tarea por su ID.
@@ -113,7 +115,8 @@ async def get_task(
     response_model=TaskListResponseDTO,
     summary="List tasks with filters",
     responses={
-        200: {"description": "Tasks retrieved successfully"}
+        200: {"description": "Tasks retrieved successfully"},
+        401: {"description": "Not authenticated"}
     }
 )
 async def list_tasks(
@@ -122,7 +125,8 @@ async def list_tasks(
     assigned_to: UUID | None = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    use_case: ListTasksUseCase = Depends(get_list_tasks_use_case)
+    use_case: ListTasksUseCase = Depends(get_list_tasks_use_case),
+    current_user_id: UUID = Depends(get_current_user_id)
 ) -> TaskListResponseDTO:
     """
     Lista tareas con filtros opcionales.
@@ -151,13 +155,15 @@ async def list_tasks(
     responses={
         200: {"description": "Task updated successfully"},
         400: {"description": "Invalid state transition"},
+        401: {"description": "Not authenticated"},
         404: {"description": "Task not found"}
     }
 )
 async def update_task(
     task_id: UUID,
     dto: UpdateTaskDTO,
-    use_case: UpdateTaskUseCase = Depends(get_update_task_use_case)
+    use_case: UpdateTaskUseCase = Depends(get_update_task_use_case),
+    current_user_id: UUID = Depends(get_current_user_id)
 ) -> TaskResponseDTO:
     """
     Actualiza una tarea existente.
@@ -186,13 +192,15 @@ async def update_task(
     responses={
         200: {"description": "Task assigned successfully"},
         400: {"description": "Cannot assign task"},
+        401: {"description": "Not authenticated"},
         404: {"description": "Task not found"}
     }
 )
 async def assign_task(
     task_id: UUID,
     dto: AssignTaskDTO,
-    use_case: AssignTaskUseCase = Depends(get_assign_task_use_case)
+    use_case: AssignTaskUseCase = Depends(get_assign_task_use_case),
+    current_user_id: UUID = Depends(get_current_user_id)
 ) -> TaskResponseDTO:
     """
     Asigna una tarea a un usuario específico.
@@ -218,12 +226,14 @@ async def assign_task(
     responses={
         200: {"description": "Task deleted successfully"},
         400: {"description": "Task cannot be deleted"},
+        401: {"description": "Not authenticated"},
         404: {"description": "Task not found"}
     }
 )
 async def delete_task(
     task_id: UUID,
-    use_case: DeleteTaskUseCase = Depends(get_delete_task_use_case)
+    use_case: DeleteTaskUseCase = Depends(get_delete_task_use_case),
+    current_user_id: UUID = Depends(get_current_user_id)
 ) -> TaskDeletedResponseDTO:
     """
     Elimina una tarea.
