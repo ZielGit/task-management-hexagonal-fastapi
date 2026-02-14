@@ -1,0 +1,90 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: task_management_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-taskuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskpass}
+      POSTGRES_DB: ${POSTGRES_DB:-taskdb}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-taskuser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - task_network
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: task_management_api
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taskuser}:${POSTGRES_PASSWORD:-taskpass}@db:5432/${POSTGRES_DB:-taskdb}
+      
+      # API
+      API_HOST: ${API_HOST:-0.0.0.0}
+      API_PORT: ${API_PORT:-8000}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      
+      # JWT
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-1440}
+      
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      
+      # Python path
+      PYTHONPATH: /app
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: 
+      - /bin/sh
+      - -c
+      - |
+        echo "🚀 Starting API..."
+        echo "Python path: $PYTHONPATH"
+        echo "Current directory: $(pwd)"
+        echo "Contents:"
+        ls -la
+        echo "Starting uvicorn..."
+        uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - task_network
+    restart: unless-stopped
+
+  # Adminer - Database Management UI (opcional)
+  adminer:
+    image: adminer:latest
+    container_name: task_management_adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - task_network
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  task_network:
+    driver: bridge
