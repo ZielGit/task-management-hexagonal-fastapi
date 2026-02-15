@@ -18,6 +18,7 @@ from ...infrastructure.auth.auth_service_impl import AuthServiceImpl
 from ..database.connection import get_db_session
 from ..database.sqlalchemy_task_repository import SQLAlchemyTaskRepository
 from ..database.sqlalchemy_user_repository import SQLAlchemyUserRepository
+from ..database.unit_of_work import UnitOfWork
 from ..auth.jwt_service import JWTService
 
 
@@ -203,3 +204,16 @@ async def get_current_active_user_id(
     """
     # TODO: Verificar en BD que el usuario esté activo
     return user_id
+
+# ============= UNIT OF WORK DEPENDENCY =============
+
+async def get_unit_of_work(
+    session: AsyncSession = Depends(get_db_session)
+) -> UnitOfWork:
+    """
+    Provee una instancia del Unit of Work.
+    Útil para casos de uso que operan sobre múltiples repositorios
+    en una sola transacción atómica.
+    """
+    from ..database.unit_of_work import UnitOfWork
+    return UnitOfWork(session)
