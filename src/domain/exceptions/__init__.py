@@ -3,8 +3,8 @@ Domain Exceptions
 Excepciones específicas del dominio de negocio
 """
 
+from .base import DomainException
 from .task_exceptions import (
-    DomainException,
     TaskException,
     TaskNotFoundException,
     InvalidTaskStateTransition,
